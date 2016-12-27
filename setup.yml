@@ -1,0 +1,100 @@
+---
+# Setup hubot-webcamera onto Raspberry Pi
+
+- hosts: all
+  remote_user: pi
+  become: no
+  vars:
+    home: /home/pi
+    node:
+      version: 6.9
+  tasks:
+    - name: Update package list
+      apt:
+        update_cache: yes
+      become: yes
+
+    - name: Install packages
+      apt:
+        name: "{{ item }}"
+      become: yes
+      with_items:
+        - fswebcam
+
+    - name: Get ndenv
+      git:
+        repo: https://github.com/riywo/ndenv
+        dest: "{{ home }}/.ndenv"
+
+    - name: Get node-build
+      git:
+        repo: https://github.com/riywo/node-build
+        dest: "{{ home }}/.ndenv/plugins/node-build"
+
+    - name: Add ndenv configurations
+      lineinfile:
+        dest: "{{ home }}/.bashrc"
+        line: "{{ item }}"
+      with_items:
+        - 'export PATH="$HOME/.ndenv/bin:$PATH"'
+        - 'eval "$(ndenv init -)"'
+
+    - name: Create hubot-webcamera directory
+      file:
+        path: "{{ home }}/hubot-webcamera"
+        state: directory
+
+    - name: Copy hubot-webcamera
+      copy:
+        src: ./hubot-webcamera/{{ item }}
+        dest: "{{ home }}/hubot-webcamera/"
+      with_items:
+        - .node-version
+        - bin
+        - external-scripts.json
+        - package.json
+        - scripts
+
+    - name: Create caputure directory
+      file:
+        path: /tmp/webcam
+        state: directory
+
+    - name: Set executable permission to hubot
+      file:
+        path: "{{ home }}/hubot-webcamera/bin/hubot"
+        mode: 0755
+
+    - name: Check if node is installed
+      shell: ndenv versions | grep {{ node.version }}
+      always_run: yes
+      ignore_errors: yes
+      changed_when: no
+      environment:
+        PATH: "{{ home }}/.ndenv/bin:{{ ansible_env.PATH }}"
+      register: node_installed
+
+    - name: Install node
+      # NOTE: 'shell: /bin/bash -lc "ndenv install"' does not work
+      command: ndenv install
+      args:
+        chdir: "{{ home }}/hubot-webcamera"
+      environment:
+        PATH: "{{ home }}/.ndenv/bin:{{ ansible_env.PATH }}"
+      when: node_installed | failed
+
+    - name: Install redis
+      apt:
+        name: redis-server
+      become: yes
+
+    - name: Start redis
+      service:
+        name: redis-server
+        enabled: yes
+      become: yes
+
+#    - name: Start hubot
+#      shell: bin/hubot
+#      args:
+#        chdir: "{{ home }}/hubot-webcamera"

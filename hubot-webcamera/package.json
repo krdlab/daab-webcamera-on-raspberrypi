@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "author": "krdlab <krdlab@gmail.com>",
-  "description": "Controls Web camera",
+  "description": "Hubot controls a web camera",
   "dependencies": {
     "hubot": "^2.19.0",
     "hubot-diagnostics": "0.0.1",
