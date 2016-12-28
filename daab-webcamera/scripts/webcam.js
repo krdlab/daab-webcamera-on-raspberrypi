@@ -1,3 +1,19 @@
+// Description:
+//  daab controls a web camera.
+//
+// Dependencies:
+//  "lisb-hubot": "^2.16.0"
+//
+// Configuration:
+//
+// Commands:
+//  snapshot - Take a snapshot from USB web camera
+//
+// Notes:
+//
+// Author:
+//  krdlab <krdlab@gmail.com>
+
 const exec = require('child_process').exec
 
 const CAPTURE_ROOT   = '/tmp/webcam'  // TODO

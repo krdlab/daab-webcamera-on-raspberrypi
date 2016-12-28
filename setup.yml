@@ -1,5 +1,5 @@
 ---
-# Setup hubot-webcamera onto Raspberry Pi
+# Setup daab-webcamera onto Raspberry Pi
 
 - hosts: all
   remote_user: pi
@@ -8,6 +8,8 @@
     home: /home/pi
     node:
       version: 6.9
+    ndenv:
+      path: "{{ home }}/.ndenv/shims:{{ home }}/.ndenv/bin"
   tasks:
     - name: Update package list
       apt:
@@ -39,15 +41,15 @@
         - 'export PATH="$HOME/.ndenv/bin:$PATH"'
         - 'eval "$(ndenv init -)"'
 
-    - name: Create hubot-webcamera directory
+    - name: Create daab-webcamera directory
       file:
-        path: "{{ home }}/hubot-webcamera"
+        path: "{{ home }}/daab-webcamera"
         state: directory
 
-    - name: Copy hubot-webcamera
+    - name: Copy daab-webcamera
       copy:
-        src: ./hubot-webcamera/{{ item }}
-        dest: "{{ home }}/hubot-webcamera/"
+        src: ./daab-webcamera/{{ item }}
+        dest: "{{ home }}/daab-webcamera/"
       with_items:
         - .node-version
         - bin
@@ -62,7 +64,7 @@
 
     - name: Set executable permission to hubot
       file:
-        path: "{{ home }}/hubot-webcamera/bin/hubot"
+        path: "{{ home }}/daab-webcamera/bin/hubot"
         mode: 0755
 
     - name: Check if node is installed
@@ -71,17 +73,36 @@
       ignore_errors: yes
       changed_when: no
       environment:
-        PATH: "{{ home }}/.ndenv/bin:{{ ansible_env.PATH }}"
+        PATH: "{{ ndenv.path }}:{{ ansible_env.PATH }}"
       register: node_installed
 
     - name: Install node
       # NOTE: 'shell: /bin/bash -lc "ndenv install"' does not work
       command: ndenv install
       args:
-        chdir: "{{ home }}/hubot-webcamera"
+        chdir: "{{ home }}/daab-webcamera"
       environment:
-        PATH: "{{ home }}/.ndenv/bin:{{ ansible_env.PATH }}"
+        PATH: "{{ ndenv.path }}:{{ ansible_env.PATH }}"
       when: node_installed | failed
+
+    - name: Check if daab is installed
+      shell: npm ls -g | grep daab
+      args:
+        chdir: "{{ home }}/daab-webcamera"
+      always_run: yes
+      ignore_errors: yes
+      changed_when: no
+      environment:
+        PATH: "{{ ndenv.path }}:{{ ansible_env.PATH }}"
+      register: daab_installed
+
+    - name: Install daab
+      shell: npm install -g daab && ndenv rehash
+      args:
+        chdir: "{{ home }}/daab-webcamera"
+      environment:
+        PATH: "{{ ndenv.path }}:{{ ansible_env.PATH }}"
+      when: daab_installed | failed
 
     - name: Install redis
       apt:
@@ -93,8 +114,3 @@
         name: redis-server
         enabled: yes
       become: yes
-
-#    - name: Start hubot
-#      shell: bin/hubot
-#      args:
-#        chdir: "{{ home }}/hubot-webcamera"
